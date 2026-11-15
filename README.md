@@ -33,8 +33,8 @@ A desktop application for petrophysical well log analysis. Load a LAS file and i
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/afiqsyahmi54-code/welllogapp.git
-cd welllogapp
+git clone https://github.com/afiqsyahmi54-code/WellLogInsight.git
+cd WellLogInsight
 ```
 
 ### 2. Create and activate a virtual environment
