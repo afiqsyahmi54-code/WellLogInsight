@@ -6,10 +6,10 @@ from kivy_garden.matplotlib import FigureCanvasKivyAgg
 from kivymd.app import MDApp
 from kivymd.toast import toast
 
-import numpy as np
 import matplotlib.pyplot as plt
 
 from utils.android_file_utils import read_las_file
+from utils.calculations import calculate_porosity, detect_reservoir_intervals, gr_cutoff
 from utils.plot_utils import create_depth_track
 from utils.constants import COLORS
 
@@ -86,69 +86,17 @@ class PorosityScreen(Screen):
         fig_height = max(8, min(canvas_height / 100, 100))
 
         # ========= GR CUTOFF =========
-        gr_series = df["Gamma Ray"].dropna()
-        if gr_series.empty:
+        cut_off = gr_cutoff(df["Gamma Ray"])
+        if cut_off is None:
             toast("No Gamma Ray data")
             return
 
-        gr_min = gr_series.min()
-        gr_max = gr_series.max()
-        cut_off = (gr_max - gr_min) / 2 + gr_min
-
         # ========= INTERVALS =========
-        intervals = []
-        in_zone = False
-        start_depth = None
-        min_gr = max_gr = None
-        prev_depth = None
-
-        for _, row in df.iterrows():
-            d = row["Depth"]
-            gr = row["Gamma Ray"]
-
-            if np.isnan(gr):
-                if in_zone:
-                    intervals.append((start_depth, prev_depth, min_gr, max_gr))
-                    in_zone = False
-                prev_depth = d
-                continue
-
-            if gr < cut_off:
-                if not in_zone:
-                    in_zone = True
-                    start_depth = d
-                    min_gr = max_gr = gr
-                else:
-                    min_gr = min(min_gr, gr)
-                    max_gr = max(max_gr, gr)
-            else:
-                if in_zone:
-                    intervals.append((start_depth, prev_depth, min_gr, max_gr))
-                    in_zone = False
-
-            prev_depth = d
-
-        if in_zone:
-            intervals.append((start_depth, prev_depth, min_gr, max_gr))
-
+        intervals = detect_reservoir_intervals(depth, df["Gamma Ray"], cut_off)
         self.intervals = intervals
 
         # ========= POROSITY =========
-        porosity = None
-        if "Density" in df.columns:
-            rho_matrix = 2.65
-            rho_fluid = 1.0
-            phi_d = (rho_matrix - df["Density"]) / (rho_matrix - rho_fluid)
-            phi_d = np.clip(phi_d, 0, 1)
-
-            if "Neutron" in df.columns:
-                neutron = df["Neutron"]
-                if neutron.max() > 1:
-                    neutron = neutron / 100
-                porosity = (phi_d + neutron) / 2
-            else:
-                porosity = phi_d
-
+        porosity = calculate_porosity(df["Density"], df["Neutron"])
         # ========= DEPTH TRACK =========
         fig_depth, ax_depth = create_depth_track(
             depth_min, depth_max, fig_height, intervals

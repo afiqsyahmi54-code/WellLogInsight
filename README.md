@@ -20,7 +20,7 @@ A desktop application for petrophysical well log analysis. Load a LAS file and i
 
 | Tool | Purpose |
 |------|---------|
-| Python 3.10 | Core language |
+| Python 3.10+ | Core language |
 | Kivy + KivyMD | Cross-platform UI framework |
 | Matplotlib | Well log track plotting |
 | NumPy + Pandas | Data processing |
@@ -55,6 +55,15 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+### 5. Run the tests (optional)
+
+```bash
+pip install -r requirements-dev.txt
+pytest
+```
+
+The tests cover the petrophysical calculations (reservoir interval detection, Vshale, porosity and Archie's equation), including a check against a straightforward reference implementation.
 
 ---
 
@@ -92,8 +101,10 @@ welllogapp/
 ├── kv_files/                      # UI layouts (Kivy language)
 ├── utils/                         # Shared utilities
 │   ├── android_file_utils.py      # LAS file reader
+│   ├── calculations.py            # Vshale, porosity, Sw, reservoir intervals
 │   ├── plot_utils.py              # Matplotlib plot helpers
 │   └── constants.py               # Colour palette
+├── tests/                         # Unit tests for the calculations
 └── assets/                        # Icons and images
 ```
 

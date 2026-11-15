@@ -7,10 +7,15 @@ from kivymd.uix.label import MDLabel
 from kivymd.toast import toast
 from kivymd.app import MDApp
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 
 from utils.android_file_utils import read_las_file
+from utils.calculations import (
+    calculate_porosity,
+    calculate_vshale,
+    calculate_water_saturation,
+    detect_reservoir_intervals,
+    gr_cutoff,
+)
 from utils.constants import COLORS
 from utils.plot_utils import create_depth_track
 
@@ -106,79 +111,6 @@ class ReservoirScreen(Screen):
                     theme_text_color="Secondary"
                 )
                 intervals_box.add_widget(label_widget)
-
-    # ========== PETROPHYSICAL CALCULATION METHODS ==========
-    
-    def calculate_porosity(self, df):
-        """Calculate porosity from density-neutron crossplot"""
-        try:
-            # Density porosity calculation
-            rho_matrix = 2.65  # g/cm³ (sandstone matrix)
-            rho_fluid = 1.0    # g/cm³ (fresh water)
-            
-            if "Density" not in df.columns:
-                return None
-            
-            phi_density = (rho_matrix - df["Density"]) / (rho_matrix - rho_fluid)
-            phi_density = np.clip(phi_density, 0, 1)
-            
-            # If we have neutron porosity, calculate average
-            if "Neutron" in df.columns:
-                neutron = df["Neutron"]
-                if neutron.max() > 1:
-                    neutron = neutron / 100
-                phi_total = (phi_density + neutron) / 2
-            else:
-                phi_total = phi_density
-            
-            return phi_total
-            
-        except Exception as e:
-            print(f"Error calculating porosity: {e}")
-            return None
-
-    def calculate_vshale(self, df):
-        """Calculate shale volume (Vshale) from Gamma Ray"""
-        try:
-            if "Gamma Ray" not in df.columns:
-                return None, None, None
-            
-            gr = df["Gamma Ray"]
-            gr_clean = gr.quantile(0.10)
-            gr_shale = gr.quantile(0.90)
-            
-            vsh = (gr - gr_clean) / (gr_shale - gr_clean)
-            vsh = np.clip(vsh, 0, 1)
-            
-            return vsh, gr_clean, gr_shale
-            
-        except Exception as e:
-            print(f"Error calculating Vshale: {e}")
-            return None, None, None
-
-    def calculate_water_saturation(self, df, porosity, m, n, rw=0.1, rt=None):
-        """Calculate water saturation using Archie's equation"""
-        try:
-            if porosity is None:
-                return None
-            
-            if rt is None:
-                if "Resistivity" in df.columns:
-                    rt = df["Resistivity"]
-                else:
-                    return None
-            
-            phi = np.clip(porosity, 0.01, 1.0)
-            rt_clipped = np.clip(rt, 0.1, 10000)
-            
-            sw = (0.62 * rw / (phi**m * rt_clipped))**(1/n)
-            sw = np.clip(sw, 0, 1)
-            
-            return sw
-            
-        except Exception as e:
-            print(f"Error calculating water saturation: {e}")
-            return None
 
     # ========== ENHANCED PLOTTING METHOD WITH NEW TRACKS ==========
     
@@ -323,8 +255,8 @@ class ReservoirScreen(Screen):
             spine.set_color('#333333')
 
         # ========== POROSITY TRACK ==========
-        porosity = self.calculate_porosity(df)
-        
+        porosity = calculate_porosity(df["Density"], df["Neutron"])
+
         if porosity is not None:
             ax_phi.plot(porosity * 100, df["Depth"],
                        color=COLORS['porosity'], 
@@ -364,7 +296,7 @@ class ReservoirScreen(Screen):
             spine.set_color('#333333')
 
         # ========== VSHALE TRACK ==========
-        vshale, gr_clean, gr_shale = self.calculate_vshale(df)
+        vshale, gr_clean, gr_shale = calculate_vshale(df["Gamma Ray"])
         
         if vshale is not None:
             ax_vsh.plot(vshale * 100, df["Depth"],
@@ -413,8 +345,13 @@ class ReservoirScreen(Screen):
 
         # ========== WATER SATURATION TRACK ==========
         if porosity is not None:
-            water_saturation = self.calculate_water_saturation(df, porosity, self.m_value, self.n_value)
-            
+            try:
+                water_saturation = calculate_water_saturation(
+                    porosity, df["Resistivity"], self.m_value, self.n_value
+                )
+            except ValueError:
+                water_saturation = None
+
             if water_saturation is not None:
                 ax_sw.plot(water_saturation * 100, df["Depth"],
                           color=COLORS['water_saturation'], 
@@ -494,53 +431,14 @@ class ReservoirScreen(Screen):
         depth_max = depth.max()
         depth_range = depth_max - depth_min
 
-        # Calculate cut-off
-        gr_series = df["Gamma Ray"].dropna()
-        if gr_series.empty:
+        # Calculate cut-off and detect intervals
+        cut_off = gr_cutoff(df["Gamma Ray"])
+        if cut_off is None:
             toast("No valid Gamma Ray data found.")
             return
-        gr_min = gr_series.min()
-        gr_max = gr_series.max()
-        cut_off = (gr_max - gr_min) / 2.0 + gr_min
         self.cut_off = cut_off
 
-        # Detect intervals
-        in_zone = False
-        start_depth = None
-        end_depth = None
-        min_gr = None
-        max_gr = None
-        intervals = []
-        prev_depth = None
-        
-        for _, row in df.iterrows():
-            d = row["Depth"]
-            gr = row["Gamma Ray"]
-            if pd.isna(gr):
-                if in_zone:
-                    in_zone = False
-                    intervals.append((start_depth, prev_depth, min_gr, max_gr))
-                continue
-
-            if gr < cut_off:
-                if not in_zone:
-                    in_zone = True
-                    start_depth = d
-                    min_gr = gr
-                    max_gr = gr
-                else:
-                    min_gr = min(min_gr, gr)
-                    max_gr = max(max_gr, gr)
-            else:
-                if in_zone:
-                    in_zone = False
-                    intervals.append((start_depth, prev_depth, min_gr, max_gr))
-            prev_depth = d
-
-        # If ended while in zone
-        if in_zone:
-            intervals.append((start_depth, prev_depth, min_gr, max_gr))
-
+        intervals = detect_reservoir_intervals(df["Depth"], df["Gamma Ray"], cut_off)
         # Save detected intervals
         self.detected_intervals = intervals
         self.intervals = intervals
