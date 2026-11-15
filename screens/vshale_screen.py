@@ -1,8 +1,11 @@
 # screens/vshale_screen.py
 from kivy.uix.screenmanager import Screen
+from kivymd.uix.spinner import MDSpinner
 from kivy_garden.matplotlib import FigureCanvasKivyAgg
 from kivymd.app import MDApp
 from kivymd.toast import toast
+from kivy.clock import Clock
+
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -19,6 +22,14 @@ class VshaleScreen(Screen):
         self.current_figures = []   # ✅ REQUIRED FOR PDF
         self.intervals = []
 
+    def show_loading(self):
+        self.ids.loading_spinner.active = True
+        self.ids.loading_label.opacity = 1
+
+    def hide_loading(self):
+        self.ids.loading_spinner.active = False
+        self.ids.loading_label.opacity = 0
+
     def on_enter(self):
         app = MDApp.get_running_app()
 
@@ -32,7 +43,18 @@ class VshaleScreen(Screen):
         except Exception:
             pass
 
-        self.plot_vshale(app.selected_file)
+        self.show_loading()
+        Clock.schedule_once(
+            lambda dt: self._plot_vshale_safe(app.selected_file),
+            0.1
+        )
+    def _plot_vshale_safe(self, file_path):
+        try:
+            self.plot_vshale(file_path)
+        except Exception as e:
+            toast(f"Error plotting Vshale: {str(e)}")
+        finally:
+            self.hide_loading()
 
     def plot_vshale(self, file_path):
         if not file_path:

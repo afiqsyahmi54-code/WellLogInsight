@@ -1,4 +1,6 @@
 # screens/porosity_screen.py
+from kivy.clock import Clock
+from kivymd.uix.spinner import MDSpinner
 from kivy.uix.screenmanager import Screen
 from kivy_garden.matplotlib import FigureCanvasKivyAgg
 from kivymd.app import MDApp
@@ -18,6 +20,20 @@ class PorosityScreen(Screen):
         super().__init__(**kwargs)
         self.current_figures = []   # ✅ REQUIRED FOR PDF
         self.intervals = []
+    
+    def show_loading(self):
+        self.ids.loading_spinner.active = True
+        self.ids.loading_label.opacity = 1
+
+    def hide_loading(self):
+        self.ids.loading_spinner.active = False
+        self.ids.loading_label.opacity = 0
+
+    def _plot_porosity_safe(self, file_path):
+        try:
+            self.plot_porosity(file_path)
+        finally:
+            self.hide_loading()
 
     def on_enter(self):
         app = MDApp.get_running_app()
@@ -32,7 +48,11 @@ class PorosityScreen(Screen):
         except Exception:
             pass
 
-        self.plot_porosity(app.selected_file)
+        self.show_loading()
+        Clock.schedule_once(
+            lambda dt: self._plot_porosity_safe(app.selected_file),
+            0.1
+        )
 
     def plot_porosity(self, file_path):
         if not file_path:

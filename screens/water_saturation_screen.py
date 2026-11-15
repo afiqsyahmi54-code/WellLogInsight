@@ -1,4 +1,6 @@
 # screens/water_saturation_screen.py
+from kivy.clock import Clock
+from kivymd.uix.spinner import MDSpinner
 from kivy.uix.screenmanager import Screen
 from kivy_garden.matplotlib import FigureCanvasKivyAgg
 from kivymd.app import MDApp
@@ -20,6 +22,20 @@ class WaterSaturationScreen(Screen):
         self.current_axes = []
         self.current_canvases = []
 
+    def show_loading(self):
+        self.ids.loading_spinner.active = True
+        self.ids.loading_label.opacity = 1
+
+    def hide_loading(self):
+        self.ids.loading_spinner.active = False
+        self.ids.loading_label.opacity = 0
+
+    def _plot_sw_safe(self, file_path):
+        try:
+            self.plot_water_saturation(file_path)
+        finally:
+            self.hide_loading()
+
     def on_enter(self):
         app = MDApp.get_running_app()
         try:
@@ -32,7 +48,11 @@ class WaterSaturationScreen(Screen):
         except Exception:
             pass
 
-        self.plot_water_saturation(app.selected_file)
+        self.show_loading()
+        Clock.schedule_once(
+            lambda dt: self._plot_sw_safe(app.selected_file),
+            0.1
+        )
 
     # =========================================================
     # CORE PLOTTING METHOD (MATCHES RESERVOIR STYLE)

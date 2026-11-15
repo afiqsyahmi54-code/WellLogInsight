@@ -50,3 +50,19 @@
                 text: "Back"
                 pos_hint: {"center_x": 0.5}
                 on_release: root.navigate_back()
+
+            MDSpinner:
+                id: loading_spinner
+                size_hint: None, None
+                size: "64dp", "64dp"
+                pos_hint: {"center_x": 0.5, "center_y": 0.55}
+                active: False
+
+            MDLabel:
+                id: loading_label
+                text: "Processing water saturation..."
+                halign: "center"
+                pos_hint: {"center_x": 0.5, "center_y": 0.48}
+                theme_text_color: "Custom"
+                text_color: 0.4, 0.4, 0.4, 1
+                opacity: 0

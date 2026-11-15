@@ -1,4 +1,6 @@
 # screens/reservoir_screen.py - Reservoir identification screen
+from kivy.clock import Clock
+from kivymd.uix.spinner import MDSpinner
 from kivy.uix.screenmanager import Screen
 from kivy_garden.matplotlib import FigureCanvasKivyAgg
 from kivymd.uix.label import MDLabel
@@ -24,6 +26,15 @@ class ReservoirScreen(Screen):
         self.intervals = []
         self.m_value = 2.0
         self.n_value = 2.0
+    
+    def show_loading(self):
+        self.ids.loading_spinner.active = True
+        self.ids.loading_label.opacity = 1
+
+    def hide_loading(self):
+        self.ids.loading_spinner.active = False
+        self.ids.loading_label.opacity = 0
+
         
     def on_enter(self):
         """Update info when entering screen"""
@@ -49,7 +60,14 @@ class ReservoirScreen(Screen):
             self.n_value = 2.0
 
         # Plot the reservoir identification
-        self.plot_and_identify(app.selected_file)
+        self.show_loading()
+        Clock.schedule_once(lambda dt: self._run_full_log(app.selected_file), 0.1)
+
+    def _run_full_log(self, file_path):
+        try:
+            self.plot_and_identify(file_path)
+        finally:
+            self.hide_loading()
 
     def clear_previous(self):
         """Clear only the plot widgets, NOT the interval list"""

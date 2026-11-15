@@ -1,25 +1,22 @@
 # main.py - Main application entry point
+import os
 import sys
+from kivy.config import Config
+from kivy.properties import StringProperty
 from kivymd.app import MDApp
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager
 from kivymd.uix.filemanager import MDFileManager
-import os
 from datetime import datetime
 
-# Debug: Print Python paths
-print("Python executable:", sys.executable)  # Now this will work
-print("Python version:", sys.version)
-print("Current directory:", os.getcwd())
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS  # PyInstaller temp folder
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
-# Try to find the correct Python path
-venv_python = r"C:\Users\afiqs\Degree\FYPII\backup\k_venv\Scripts\python.exe"
-if os.path.exists(venv_python):
-    print(f"Virtual environment Python found at: {venv_python}")
-else:
-    print("Virtual environment Python NOT found!")
-    # Try to use current Python
-    print(f"Using system Python: {sys.executable}")
+Config.set('kivy', 'window_icon', resource_path("assets/1.png"))
 
 # Import screen classes
 from screens.start_screen import StartScreen
@@ -31,17 +28,21 @@ from screens.vshale_screen import VshaleScreen
 from screens.porosity_screen import PorosityScreen
 from screens.water_saturation_screen import WaterSaturationScreen
 
-# Load all KV files
-Builder.load_file("kv_files/start_screen.kv")
-Builder.load_file("kv_files/welllog_screen.kv")
-Builder.load_file("kv_files/viewlog_screen.kv")
-Builder.load_file("kv_files/reservoir_screen.kv")
-Builder.load_file("kv_files/interpretation_screen.kv")
-Builder.load_file("kv_files/vshale_screen.kv")
-Builder.load_file("kv_files/porosity_screen.kv")  
-Builder.load_file("kv_files/water_saturation_screen.kv")      
+# Load all KV files (EXE-safe)
+kv_dir = resource_path("kv_files")
+
+for file in os.listdir(kv_dir):
+    if file.endswith(".kv"):
+        Builder.load_file(os.path.join(kv_dir, file))
+
 
 class WellLogApp(MDApp):
+    title = "WellLog Insight"
+    logo_path = StringProperty("")
+
+    def get_resource(self, relative_path):
+        return resource_path(relative_path)
+    
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.selected_file = None
@@ -56,6 +57,7 @@ class WellLogApp(MDApp):
             select_path=self.select_save_path,
             selector='folder'
         )
+        self.logo_path = resource_path("assets/1.png")
     
     def build(self):
         # Create screen manager

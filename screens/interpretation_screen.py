@@ -35,19 +35,6 @@ class InterpretationScreen(Screen):
         except Exception as e:
             print(f"Error updating well info: {e}")
     
-    def show_vshale_info(self):
-        app = MDApp.get_running_app()
-        app.change_screen("vshale")
-    
-    def show_porosity_info(self):
-        app = MDApp.get_running_app()
-        app.change_screen("porosity")
-    
-    def show_water_saturation_info(self):
-        app = MDApp.get_running_app()
-        app.change_screen("watersaturation")
-    
     def navigate_back(self):
-        """Navigate back to welllog screen"""
         app = MDApp.get_running_app()
         app.change_screen("welllog")

@@ -3,23 +3,16 @@
     name: "start"
     MDBoxLayout:
         orientation: "vertical"
-        spacing: "20dp"
+        spacing: "14dp"
         padding: "40dp"
         md_bg_color: 1, 1, 1, 1
 
         Widget:
 
-        Image:
-            source: "assets/1.png"
-            size_hint_y: None
-            height: "380dp"
-            allow_stretch: True
-            keep_ratio: True
-
         MDLabel:
             text: "WellLog Insight"
             halign: "center"
-            font_style: "H5"
+            font_style: "H3"
             theme_text_color: "Custom"
             text_color: 0, 0, 0, 1
             bold: True
@@ -27,9 +20,9 @@
         MDLabel:
             text: "Interpret your well data"
             halign: "center"
-            font_style: "Subtitle1"
+            font_style: "H6"
             theme_text_color: "Custom"
-            text_color: 0.3, 0.3, 0.3, 1
+            text_color: 0.45, 0.45, 0.45, 1
 
         Widget:
 
@@ -40,4 +33,9 @@
             size_hint_x: 0.6
             on_release: app.root.current = "welllog"
 
-        Widget:
+        MDLabel:
+            text: "Developed by Afiq Syahmi"
+            halign: "center"
+            font_style: "Caption"
+            theme_text_color: "Custom"
+            text_color: 0.5, 0.5, 0.5, 1

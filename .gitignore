@@ -1,0 +1,10 @@
+﻿kivy_env/
+Welllogapp/
+temp_plots/
+__pycache__/
+*.apk
+*.aab
+.gradle/
+build/
+.pytest_cache/
+.vscode/

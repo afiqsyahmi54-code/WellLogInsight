@@ -1,11 +1,11 @@
 # screens/viewlog_screen.py - View log screen implementation
+from kivy.clock import Clock
 from kivy.uix.screenmanager import Screen
 from kivy_garden.matplotlib import FigureCanvasKivyAgg
 from utils.android_file_utils import read_las_file
 import matplotlib.pyplot as plt
 from kivymd.app import MDApp
 from kivymd.toast import toast
-import importlib
 
 class ViewLogScreen(Screen):
     def __init__(self, **kwargs):
@@ -26,15 +26,28 @@ class ViewLogScreen(Screen):
         except Exception:
             pass
 
-        self.plot_logs(app.selected_file)
+        self.show_loading()
+        Clock.schedule_once(
+            lambda dt: self._plot_with_spinner(app.selected_file),
+            0.1
+        )
+
+    
+    def show_loading(self):
+        self.ids.loading_spinner.active = True
+        self.ids.loading_label.opacity = 1
+
+    def hide_loading(self):
+        self.ids.loading_spinner.active = False
+        self.ids.loading_label.opacity = 0
+
+    def _plot_with_spinner(self, file_path):
+        try:
+            self.plot_logs(file_path)
+        finally:
+            self.hide_loading()
 
     def plot_logs(self, file_path):
-        """Plot well logs from LAS file"""
-        # Force reload of plot_utils to get latest changes
-        import utils.plot_utils
-        importlib.reload(utils.plot_utils)
-        
-        # Now import the functions
         from utils.plot_utils import create_welllog_plots, create_depth_track
         
         box = self.ids.box_area
@@ -52,13 +65,6 @@ class ViewLogScreen(Screen):
         if df is None:
             return
 
-        # DEBUG: Print data ranges
-        print("=== DEBUG: Data Ranges ===")
-        print(f"Gamma Ray min: {df['Gamma Ray'].min():.2f}, max: {df['Gamma Ray'].max():.2f}")
-        print(f"Density min: {df['Density'].min():.2f}, max: {df['Density'].max():.2f}")
-        print(f"Neutron min: {df['Neutron'].min():.2f}, max: {df['Neutron'].max():.2f}")
-        print(f"Resistivity min: {df['Resistivity'].min():.2f}, max: {df['Resistivity'].max():.2f}")
-
         # Prepare depth and range
         depth_min = df["Depth"].min()
         depth_max = df["Depth"].max()
@@ -72,21 +78,9 @@ class ViewLogScreen(Screen):
         fig_height_inches = max(8, min(fig_height_inches, 100))
 
         # Create plots
-        print("=== DEBUG: Creating plots ===")
         fig_gr, ax_gr, fig_nd, ax_nd, fig_res, ax_res = create_welllog_plots(
             df, depth_min, depth_max, fig_height_inches
         )
-        
-        # DEBUG: Print axis limits
-        print(f"Gamma Ray xlim: {ax_gr.get_xlim()}")
-        print(f"Density xlim: {ax_nd.get_xlim()}")
-        
-        if len(fig_nd.axes) > 1:
-            twin_ax = fig_nd.axes[1]
-            print(f"Neutron xlim: {twin_ax.get_xlim()}")
-        
-        print(f"Resistivity xlim: {ax_res.get_xlim()}")
-        
         fig_depth, ax_depth = create_depth_track(depth_min, depth_max, fig_height_inches)
 
         # Store figures
