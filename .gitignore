@@ -8,3 +8,13 @@ __pycache__/
 build/
 .pytest_cache/
 .vscode/
+
+# local-only files
+generate_report.py
+WellLog_Insight_Project_Report.pdf
+venv/
+ai_env/
+k_venv/
+dist/
+*.rar
+*.spec

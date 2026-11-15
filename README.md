@@ -80,7 +80,6 @@ welllogapp/
 ├── main.py                        # App entry point
 ├── requirements.txt               # Python dependencies
 ├── ai_welllog.py                  # AI curve recognition module (in progress)
-├── generate_report.py             # PDF interview report generator
 ├── screens/                       # Screen logic (Python)
 │   ├── start_screen.py
 │   ├── welllog_screen.py
